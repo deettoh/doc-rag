@@ -6,6 +6,9 @@ __pycache__/
 # Virtual environment
 .venv/
 
+# macOS
+.DS_Store
+
 # C extensions
 *.so
 
