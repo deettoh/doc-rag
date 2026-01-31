@@ -42,7 +42,3 @@ cp .env.example .env
 # Run locally
 poetry run uvicorn app.main:app --reload
 ```
-
-## License
-
-MIT
