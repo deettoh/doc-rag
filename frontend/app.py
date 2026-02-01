@@ -14,10 +14,27 @@ st.set_page_config(
 )
 
 
+def check_backend_health() -> bool:
+    """Check if backend is healthy."""
+    try:
+        response = httpx.get(f"{BACKEND_URL}/health", timeout=5.0)
+        return response.status_code == 200
+    except httpx.RequestError:
+        return False
+
+
 def main():
     """Main application entry point."""
     st.title("DocRAG")
     st.subheader("RAG-based PDF Summarizer + QnA Generator")
+
+    # Backend health status
+    with st.sidebar:
+        st.header("System Status")
+        if check_backend_health():
+            st.success("Backend: Connected")
+        else:
+            st.error("Backend: Disconnected")
 
     # Main content placeholder
     st.markdown("---")
