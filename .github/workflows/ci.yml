@@ -25,6 +25,14 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
+      - name: Debug Poetry
+        run: |
+          poetry --version
+          poetry config --list
+          ls -la 
+          head -20 poetry.lock 
+          head -20 pyproject.toml
+
       - name: Install project
         run: poetry install --no-interaction
 
