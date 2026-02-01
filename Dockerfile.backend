@@ -1,6 +1,4 @@
-# =================================================
 # Backend Dockerfile for DocRAG FastAPI Application
-# =================================================
 
 FROM python:3.11-slim AS base
 

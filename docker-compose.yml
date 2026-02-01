@@ -1,6 +1,4 @@
-# ============================================
 # Docker Compose for DocRAG Local Development
-# ============================================
 # Services: FastAPI backend, PostgreSQL + pgvector db, Streamlit frontend
 
 services:
