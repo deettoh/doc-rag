@@ -1,0 +1,97 @@
+# Docker Compose for DocRAG Local Development
+# ============================================
+# Services: FastAPI backend, PostgreSQL + pgvector, Streamlit frontend
+
+services:
+  # PostgreSQL Database with pgvector extension
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: docrag-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: docrag
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d docrag" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - docrag-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docrag-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/docrag
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-10}
+      CHUNK_SIZE: ${CHUNK_SIZE:-1000}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-200}
+      TOP_K_RETRIEVAL: ${TOP_K_RETRIEVAL:-5}
+      MAX_LLM_CONTEXT_SIZE: ${MAX_LLM_CONTEXT_SIZE:-4000}
+      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-30}
+      JOB_TIMEOUT_SECONDS: ${JOB_TIMEOUT_SECONDS:-300}
+      ENVIRONMENT: development
+      DEBUG: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      # Simulate Fly.io volume for PDF storage
+      - pdf_storage:/app/storage/pdfs
+      # Mount source code for development hot-reload
+      - ./src:/app/src:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - docrag-network
+
+  # Streamlit Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: docrag-frontend
+    environment:
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./frontend:/app/frontend:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8501/_stcore/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - docrag-network
+
+volumes:
+  postgres_data:
+    name: docrag-postgres-data
+  pdf_storage:
+    name: docrag-pdf-storage
+
+networks:
+  docrag-network:
+    name: docrag-network
+    driver: bridge
