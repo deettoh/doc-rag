@@ -28,7 +28,6 @@ def main():
     st.title("DocRAG")
     st.subheader("RAG-based PDF Summarizer + QnA Generator")
 
-    # Backend health status
     with st.sidebar:
         st.header("System Status")
         if check_backend_health():

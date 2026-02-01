@@ -1,6 +1,7 @@
+# ============================================
 # Docker Compose for DocRAG Local Development
 # ============================================
-# Services: FastAPI backend, PostgreSQL + pgvector, Streamlit frontend
+# Services: FastAPI backend, PostgreSQL + pgvector db, Streamlit frontend
 
 services:
   # PostgreSQL Database with pgvector extension
@@ -28,7 +29,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.backend
     container_name: docrag-backend
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/docrag
