@@ -1,3 +1,18 @@
-from app.models.base import Base
+"""Database models package."""
 
-__all__ = ["Base"]
+from app.models.answer import Answer
+from app.models.base import Base
+from app.models.chunk import Chunk
+from app.models.document import Document, DocumentStatus
+from app.models.question import Question
+from app.models.summary import Summary
+
+__all__ = [
+    "Answer",
+    "Base",
+    "Chunk",
+    "Document",
+    "DocumentStatus",
+    "Question",
+    "Summary",
+]
