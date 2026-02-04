@@ -31,7 +31,7 @@ def get_database_url() -> str:
     """Get database URL from environment."""
     return os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/docrag",
+        "postgresql+psycopg://postgres:postgres@localhost:5432/docrag",
     )
 
 
