@@ -49,7 +49,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 def configure_logging() -> None:
     """Configure loguru for structured logging."""
-    logger.remove()  # Remove default handler to avoid duplicates
+    logger.remove()  # Avoid duplicate logs
     logger.add(
         sink=lambda msg: print(msg, end=""),
         format=(
