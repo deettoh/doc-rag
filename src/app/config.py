@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     request_timeout_seconds: int = 30
     job_timeout_seconds: int = 300
 
+    # Storage Settings
+    upload_dir: str = "/app/storage/pdfs"
+
     # Environment Settings
     environment: str = "development"
     debug: bool = True
