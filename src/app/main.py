@@ -10,6 +10,7 @@ from loguru import logger
 from app.config import settings
 from app.exception_handlers import register_exception_handlers
 from app.middleware import configure_logging, register_middleware
+from app.schemas import HealthResponse
 
 
 @asynccontextmanager
@@ -45,7 +46,16 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
-async def health_check() -> dict:
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["Health"],
+    summary="Health check endpoint",
+)
+async def health_check() -> HealthResponse:
     """Health check endpoint for container orchestration."""
-    return {"status": "healthy", "service": "docrag-api"}
+    return HealthResponse(
+        status="healthy",
+        service="docrag-api",
+        version="0.1.0",
+    )
