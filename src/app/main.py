@@ -10,6 +10,7 @@ from loguru import logger
 from app.config import settings
 from app.exception_handlers import register_exception_handlers
 from app.middleware import configure_logging, register_middleware
+from app.routers import documents_router
 from app.schemas import HealthResponse
 
 
@@ -44,6 +45,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register routers
+app.include_router(documents_router, prefix="/api")
 
 
 @app.get(
