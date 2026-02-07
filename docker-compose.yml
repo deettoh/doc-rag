@@ -45,8 +45,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Simulate Fly.io volume for PDF storage
-      - pdf_storage:/app/storage/pdfs
+      # Mount local storage to reflect changes in the container
+      - ./storage/pdfs:/app/storage/pdfs
       # Mount source code for development hot-reload
       - ./src:/app/src:ro
     depends_on:
