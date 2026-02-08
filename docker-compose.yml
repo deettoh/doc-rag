@@ -45,7 +45,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Mount local storage to reflect changes in the container
+      # Mount local dev storage to reflect changes in the container
       - ./storage/pdfs:/app/storage/pdfs
       # Mount source code for development hot-reload
       - ./src:/app/src:ro
