@@ -51,7 +51,9 @@ class TestDocumentUpload:
             patch("app.routers.documents.DocumentRepository") as mock_repo_class,
         ):
             mock_storage = mock_storage_class.return_value
-            mock_storage.save_pdf = AsyncMock(return_value=("/path/to/file.pdf", 100))
+            mock_storage.save_pdf = AsyncMock(
+                return_value=("/path/to/file.pdf", 100)
+            )  # 100 bytes file size
 
             mock_document = AsyncMock()
             mock_document.id = 1
