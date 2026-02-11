@@ -4,12 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
+from app.config import settings
 from app.services.chunking import ChunkData
-from app.services.embedding import (
-    EMBEDDING_DIMENSION,
-    EMBEDDING_MODEL,
-    EmbeddingService,
-)
+from app.services.embedding import EmbeddingService
 
 
 class TestEmbeddingService:
@@ -22,14 +19,14 @@ class TestEmbeddingService:
         """Embeddings should have the correct dimension."""
         mock_model = MagicMock()
         # Mock encode to return a numpy array of shape (2, 768)
-        mock_model.encode.return_value = np.random.rand(2, EMBEDDING_DIMENSION)
+        mock_model.encode.return_value = np.random.rand(2, settings.embedding_dimension)
         mock_sentence_transformer_cls.return_value = mock_model
 
         service = EmbeddingService()
         results = service.generate_embeddings(["Hello world", "Test text"])
 
         assert len(results) == 2
-        assert all(len(emb) == EMBEDDING_DIMENSION for emb in results)
+        assert all(len(emb) == settings.embedding_dimension for emb in results)
         assert isinstance(results, list)
         assert isinstance(results[0], list)
 
@@ -68,7 +65,7 @@ class TestEmbeddingService:
     ) -> None:
         """Model should be called with the exact input texts."""
         mock_model = MagicMock()
-        mock_model.encode.return_value = np.zeros((2, EMBEDDING_DIMENSION))
+        mock_model.encode.return_value = np.zeros((2, settings.embedding_dimension))
         mock_sentence_transformer_cls.return_value = mock_model
 
         service = EmbeddingService()
@@ -84,7 +81,7 @@ class TestEmbeddingService:
     ) -> None:
         """embed_chunks should extract .content and pass to generate_embeddings."""
         mock_model = MagicMock()
-        mock_model.encode.return_value = np.zeros((2, EMBEDDING_DIMENSION))
+        mock_model.encode.return_value = np.zeros((2, settings.embedding_dimension))
         mock_sentence_transformer_cls.return_value = mock_model
 
         service = EmbeddingService()
@@ -121,7 +118,7 @@ class TestEmbeddingService:
     ) -> None:
         """Model should be initialized with the configured model name."""
         EmbeddingService()
-        mock_sentence_transformer_cls.assert_called_once_with(EMBEDDING_MODEL)
+        mock_sentence_transformer_cls.assert_called_once_with(settings.embedding_model)
 
     @patch("app.services.embedding.SentenceTransformer")
     def test_single_text_embedding(
@@ -129,11 +126,11 @@ class TestEmbeddingService:
     ) -> None:
         """Single text should return a list with one embedding."""
         mock_model = MagicMock()
-        mock_model.encode.return_value = np.random.rand(1, EMBEDDING_DIMENSION)
+        mock_model.encode.return_value = np.random.rand(1, settings.embedding_dimension)
         mock_sentence_transformer_cls.return_value = mock_model
 
         service = EmbeddingService()
         results = service.generate_embeddings(["single text"])
 
         assert len(results) == 1
-        assert len(results[0]) == EMBEDDING_DIMENSION
+        assert len(results[0]) == settings.embedding_dimension

@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     request_timeout_seconds: int = 30
     job_timeout_seconds: int = 300
 
+    # Embedding Settings
+    embedding_model: str = "BAAI/bge-base-en-v1.5"
+    embedding_dimension: int = 768
+
     # Storage Settings
     upload_dir: str = "/app/storage/pdfs"
 
