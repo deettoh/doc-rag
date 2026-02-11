@@ -46,6 +46,19 @@ class ChunkRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def get_unembedded_chunks(
+        session: AsyncSession,
+        document_id: int,
+    ) -> list[Chunk]:
+        """Retrieve chunks that have not been embedded yet."""
+        result = await session.execute(
+            select(Chunk)
+            .where(Chunk.document_id == document_id, Chunk.is_embedded.is_(False))
+            .order_by(Chunk.chunk_index)
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
     async def update_embeddings(
         session: AsyncSession,
         chunk_ids: list[int],
