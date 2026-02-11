@@ -1,6 +1,6 @@
 """Repository for chunk database operations."""
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chunk import Chunk
@@ -44,3 +44,16 @@ class ChunkRepository:
             .order_by(Chunk.chunk_index)
         )
         return list(result.scalars().all())
+
+    @staticmethod
+    async def update_embeddings(
+        session: AsyncSession,
+        chunk_ids: list[int],
+        embeddings: list[list[float]],
+    ) -> None:
+        """Bulk update embedding vectors for the given chunk IDs."""
+        for chunk_id, embedding in zip(chunk_ids, embeddings, strict=True):
+            await session.execute(
+                update(Chunk).where(Chunk.id == chunk_id).values(embedding=embedding)
+            )
+        await session.flush()
