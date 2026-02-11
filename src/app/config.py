@@ -15,8 +15,6 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    openai_api_key: str = ""
-
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/docrag"
 
     # Application Settings

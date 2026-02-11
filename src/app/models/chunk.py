@@ -31,7 +31,7 @@ class Chunk(Base):
     char_start: Mapped[int] = mapped_column(nullable=False)
     char_end: Mapped[int] = mapped_column(nullable=False)
     embedding: Mapped[list[float] | None] = mapped_column(
-        Vector(1536),  # OpenAI text-embedding-3-small dimension
+        Vector(768),  # BAAI/bge-base-en-v1.5 dimension
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
