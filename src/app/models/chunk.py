@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, ForeignKey, Text, func
+from sqlalchemy import sql as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -33,6 +34,11 @@ class Chunk(Base):
     embedding: Mapped[list[float] | None] = mapped_column(
         Vector(768),  # BAAI/bge-base-en-v1.5 dimension
         nullable=True,
+    )
+    is_embedded: Mapped[bool] = mapped_column(
+        default=False,
+        server_default=sa.false(),
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

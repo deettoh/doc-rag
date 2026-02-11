@@ -54,6 +54,8 @@ class ChunkRepository:
         """Bulk update embedding vectors for the given chunk IDs."""
         for chunk_id, embedding in zip(chunk_ids, embeddings, strict=True):
             await session.execute(
-                update(Chunk).where(Chunk.id == chunk_id).values(embedding=embedding)
+                update(Chunk)
+                .where(Chunk.id == chunk_id)
+                .values(embedding=embedding, is_embedded=True)
             )
         await session.flush()
