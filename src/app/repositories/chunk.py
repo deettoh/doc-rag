@@ -11,6 +11,33 @@ class ChunkRepository:
     """Handle chunk persistence operations."""
 
     @staticmethod
+    async def similarity_search(
+        session: AsyncSession,
+        document_id: int,
+        query_embedding: list[float],
+        top_k: int,
+    ) -> list[tuple[Chunk, float]]:
+        """Find the most similar chunks to a query embedding using cosine distance.
+
+        Args:
+            session: Database session
+            document_id: Filter chunks to this document
+            query_embedding: The query vector to compare against
+            top_k: Maximum number of results to return
+
+        Returns:
+            List of (Chunk, distance) tuples ordered by ascending distance
+        """
+        distance_expr = Chunk.embedding.cosine_distance(query_embedding)
+        result = await session.execute(
+            select(Chunk, distance_expr.label("distance"))
+            .where(Chunk.document_id == document_id, Chunk.is_embedded.is_(True))
+            .order_by(distance_expr)
+            .limit(top_k)
+        )
+        return [(row.Chunk, row.distance) for row in result.all()]
+
+    @staticmethod
     async def create_bulk(
         session: AsyncSession,
         chunks: list[ChunkData],

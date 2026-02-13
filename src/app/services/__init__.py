@@ -3,6 +3,7 @@
 from app.services.chunking import ChunkingService
 from app.services.embedding import EmbeddingService
 from app.services.pdf_extractor import PDFExtractorService
+from app.services.retrieval import RetrievalService
 from app.services.storage import FileStorageService
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "EmbeddingService",
     "FileStorageService",
     "PDFExtractorService",
+    "RetrievalService",
 ]
