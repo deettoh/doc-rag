@@ -5,8 +5,12 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.exceptions import NotFoundError
 from app.repositories.document import DocumentRepository
 from app.schemas.document import DocumentResponse
+from app.schemas.retrieval import ChunkResult, RetrievalRequest, RetrievalResponse
+from app.services.embedding import EmbeddingService
+from app.services.retrieval import RetrievalService
 from app.services.storage import FileStorageService
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -44,3 +48,59 @@ async def upload_document(
     )
 
     return DocumentResponse.model_validate(document)
+
+
+@router.post(
+    "/{document_id}/search",
+    response_model=RetrievalResponse,
+    summary="Search document chunks",
+    description="Find the most relevant chunks in a document for a given query.",
+)
+async def search_document(
+    document_id: int,
+    request: RetrievalRequest,
+    session: AsyncSession = Depends(get_db),
+) -> RetrievalResponse:
+    """Search for relevant chunks within a document using similarity search."""
+    document = await DocumentRepository.get_by_id(session, document_id)
+    if document is None:
+        raise NotFoundError(resource="Document", resource_id=document_id)
+
+    logger.info(
+        "Executing similarity search",
+        document_id=document_id,
+        query_length=len(request.query),
+        top_k=request.top_k,
+    )
+
+    embedding_service = EmbeddingService()
+    retrieval_service = RetrievalService(embedding_service)
+
+    results = await retrieval_service.search_similar_chunks(
+        session=session,
+        document_id=document_id,
+        query=request.query,
+        top_k=request.top_k,
+    )
+
+    logger.info(
+        "Similarity search completed",
+        document_id=document_id,
+        results_count=len(results),
+    )
+
+    return RetrievalResponse(
+        document_id=document_id,
+        query=request.query,
+        results=[
+            ChunkResult(
+                chunk_id=r.chunk_id,
+                chunk_index=r.chunk_index,
+                content=r.content,
+                page_start=r.page_start,
+                page_end=r.page_end,
+                score=r.score,
+            )
+            for r in results
+        ],
+    )
