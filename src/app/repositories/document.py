@@ -1,6 +1,6 @@
 """Repository for document database operations."""
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import Document, DocumentStatus
@@ -35,3 +35,33 @@ class DocumentRepository:
             select(Document).where(Document.id == document_id)
         )
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def update_status(
+        session: AsyncSession,
+        document_id: int,
+        status: DocumentStatus,
+        error_message: str | None = None,
+    ) -> None:
+        """Transition a document to a new processing status."""
+        values: dict = {"status": status}
+        if error_message is not None:
+            values["error_message"] = error_message
+        await session.execute(
+            update(Document).where(Document.id == document_id).values(**values)
+        )
+        await session.flush()
+
+    @staticmethod
+    async def update_page_count(
+        session: AsyncSession,
+        document_id: int,
+        page_count: int,
+    ) -> None:
+        """Set the page count after PDF extraction."""
+        await session.execute(
+            update(Document)
+            .where(Document.id == document_id)
+            .values(page_count=page_count)
+        )
+        await session.flush()
