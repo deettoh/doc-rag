@@ -7,11 +7,17 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+# Imported all models to ensure Document relationship initializes correctly
 from app.config import settings
-from app.models import Base, Chunk, Document, DocumentStatus
-from app.repositories import ChunkRepository
-from app.services import EmbeddingService
+from app.models.answer import Answer  # noqa: F401
+from app.models.base import Base
+from app.models.chunk import Chunk
+from app.models.document import Document, DocumentStatus
+from app.models.question import Question  # noqa: F401
+from app.models.summary import Summary  # noqa: F401
+from app.repositories.chunk import ChunkRepository
 from app.services.chunking import ChunkData
+from app.services.embedding import EmbeddingService
 
 # Use in-memory SQLite for integration tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

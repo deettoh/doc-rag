@@ -5,9 +5,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+# Imported all models to ensure Document relationship initializes correctly
 from app.config import settings
-from app.models import Base, Chunk, Document, DocumentStatus
-from app.repositories import ChunkRepository
+from app.models.answer import Answer  # noqa: F401
+from app.models.base import Base
+from app.models.chunk import Chunk
+from app.models.document import Document, DocumentStatus
+from app.models.question import Question  # noqa: F401
+from app.models.summary import Summary  # noqa: F401
+from app.repositories.chunk import ChunkRepository
 from app.services.retrieval import ChunkSearchResult, RetrievalService
 
 # Use in-memory SQLite
