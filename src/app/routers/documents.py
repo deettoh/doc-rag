@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.exceptions import NotFoundError
 from app.repositories.document import DocumentRepository
-from app.schemas.document import DocumentResponse
+from app.schemas.document import DocumentResponse, DocumentStatusResponse
 from app.schemas.retrieval import ChunkResult, RetrievalRequest, RetrievalResponse
 from app.services.embedding import EmbeddingService
 from app.services.processing import DocumentProcessingService
@@ -62,6 +62,24 @@ async def upload_document(
     )
 
     return DocumentResponse.model_validate(document)
+
+
+@router.get(
+    "/{document_id}/status",
+    response_model=DocumentStatusResponse,
+    summary="Get document processing status",
+    description="Poll the current processing status of an uploaded document.",
+)
+async def get_document_status(
+    document_id: int,
+    session: AsyncSession = Depends(get_db),
+) -> DocumentStatusResponse:
+    """Return the current processing status of a document."""
+    document = await DocumentRepository.get_by_id(session, document_id)
+    if document is None:
+        raise NotFoundError(resource="Document", resource_id=document_id)
+
+    return DocumentStatusResponse.model_validate(document)
 
 
 @router.post(

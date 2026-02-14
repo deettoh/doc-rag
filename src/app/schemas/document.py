@@ -17,3 +17,15 @@ class DocumentResponse(BaseModel):
     created_at: datetime = Field(..., description="Upload timestamp")
 
     model_config = {"from_attributes": True}
+
+
+class DocumentStatusResponse(BaseModel):
+    """Response model for document status polling."""
+
+    id: int = Field(..., description="Document ID")
+    status: DocumentStatus = Field(..., description="Current processing status")
+    page_count: int | None = Field(None, description="Number of pages in PDF")
+    error_message: str | None = Field(None, description="Error details if failed")
+    updated_at: datetime = Field(..., description="Last status update timestamp")
+
+    model_config = {"from_attributes": True}
