@@ -238,3 +238,74 @@ class TestFileStorageService:
 
         assert unique_name.endswith(".pdf")
         assert unique_name != "my_document.pdf"  # Should be unique
+
+
+class TestDocumentStatus:
+    """Tests for GET /api/documents/{id}/status endpoint."""
+
+    def test_get_status_returns_document_status(self, client: TestClient) -> None:
+        """Verify status endpoint returns current document status."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_document.status = DocumentStatus.PROCESSING
+            mock_document.page_count = 5
+            mock_document.error_message = None
+            mock_document.updated_at = "2026-01-01T00:00:00"
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            response = client.get("/api/documents/1/status")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["id"] == 1
+            assert data["status"] == "processing"
+            assert data["page_count"] == 5
+            assert data["error_message"] is None
+
+    def test_get_status_completed_with_all_fields(self, client: TestClient) -> None:
+        """Verify completed status returns all expected fields."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_document = MagicMock()
+            mock_document.id = 2
+            mock_document.status = DocumentStatus.COMPLETED
+            mock_document.page_count = 10
+            mock_document.error_message = None
+            mock_document.updated_at = "2026-01-01T12:00:00"
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            response = client.get("/api/documents/2/status")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "completed"
+            assert data["page_count"] == 10
+
+    def test_get_status_failed_includes_error(self, client: TestClient) -> None:
+        """Verify failed status includes error message."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_document = MagicMock()
+            mock_document.id = 3
+            mock_document.status = DocumentStatus.FAILED
+            mock_document.page_count = None
+            mock_document.error_message = "RuntimeError: Corrupt PDF"
+            mock_document.updated_at = "2026-01-01T12:00:00"
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            response = client.get("/api/documents/3/status")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "failed"
+            assert "Corrupt PDF" in data["error_message"]
+
+    def test_get_status_not_found(self, client: TestClient) -> None:
+        """Verify non-existent document returns 404."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_repo_class.get_by_id = AsyncMock(return_value=None)
+
+            response = client.get("/api/documents/999/status")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["error_code"] == "NOT_FOUND"
