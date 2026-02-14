@@ -1,6 +1,6 @@
 """Document upload and management endpoints."""
 
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, UploadFile
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,7 @@ from app.repositories.document import DocumentRepository
 from app.schemas.document import DocumentResponse
 from app.schemas.retrieval import ChunkResult, RetrievalRequest, RetrievalResponse
 from app.services.embedding import EmbeddingService
+from app.services.processing import DocumentProcessingService
 from app.services.retrieval import RetrievalService
 from app.services.storage import FileStorageService
 
@@ -24,9 +25,10 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 )
 async def upload_document(
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db),
 ) -> DocumentResponse:
-    """Upload a PDF document for processing."""
+    """Upload a PDF document and start background processing."""
     storage_service = FileStorageService()
 
     logger.info("Processing document upload", filename=file.filename)
@@ -45,6 +47,18 @@ async def upload_document(
         document_id=document.id,
         filename=document.filename,
         file_size_bytes=file_size,
+    )
+
+    processing_service = DocumentProcessingService()
+    background_tasks.add_task(
+        processing_service.process_document,
+        document.id,
+        file_path,
+    )
+
+    logger.info(
+        "Background processing enqueued",
+        document_id=document.id,
     )
 
     return DocumentResponse.model_validate(document)
