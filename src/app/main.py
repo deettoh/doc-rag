@@ -10,8 +10,8 @@ from loguru import logger
 from app.config import settings
 from app.exception_handlers import register_exception_handlers
 from app.middleware import configure_logging, register_middleware
-from app.routers import documents_router
-from app.schemas import HealthResponse
+from app.routers.documents import router as documents_router
+from app.schemas.common import HealthResponse
 
 
 @asynccontextmanager
