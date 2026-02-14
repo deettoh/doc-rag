@@ -49,6 +49,7 @@ class TestDocumentUpload:
         with (
             patch("app.routers.documents.FileStorageService") as mock_storage_class,
             patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.DocumentProcessingService"),
         ):
             mock_storage = mock_storage_class.return_value
             mock_storage.save_pdf = AsyncMock(
@@ -133,6 +134,7 @@ class TestDocumentUpload:
         with (
             patch("app.routers.documents.FileStorageService") as mock_storage_class,
             patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.DocumentProcessingService"),
         ):
             mock_storage = mock_storage_class.return_value
             mock_storage.save_pdf = AsyncMock(return_value=("/path/to/file.pdf", 100))
@@ -157,6 +159,41 @@ class TestDocumentUpload:
             )
 
             assert "X-Request-ID" in response.headers
+
+    def test_upload_enqueues_background_task(
+        self, client: TestClient, sample_pdf_content: bytes
+    ) -> None:
+        """Verify upload endpoint enqueues a background processing task."""
+        with (
+            patch("app.routers.documents.FileStorageService") as mock_storage_class,
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.DocumentProcessingService") as mock_proc_class,
+        ):
+            mock_storage = mock_storage_class.return_value
+            mock_storage.save_pdf = AsyncMock(return_value=("/path/to/file.pdf", 100))
+
+            mock_document = AsyncMock()
+            mock_document.id = 42
+            mock_document.filename = "test.pdf"
+            mock_document.file_size_bytes = 100
+            mock_document.status = DocumentStatus.UPLOADED
+            mock_document.created_at = "2026-01-01T00:00:00"
+            mock_repo_class.create = AsyncMock(return_value=mock_document)
+
+            response = client.post(
+                "/api/documents/upload",
+                files={
+                    "file": (
+                        "test.pdf",
+                        io.BytesIO(sample_pdf_content),
+                        "application/pdf",
+                    )
+                },
+            )
+
+            assert response.status_code == 200
+            # Processing service should have been instantiated
+            mock_proc_class.assert_called_once()
 
 
 class TestFileStorageService:
