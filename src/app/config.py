@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     embedding_model: str = "BAAI/bge-base-en-v1.5"
     embedding_dimension: int = 768
 
+    # LLM Settings
+    groq_api_key: str = ""
+    llm_model: str = "llama-3.1-8b-instant"
+    llm_temperature: float = 0.3
+    llm_max_tokens: int = 2048
+
     # Storage Settings
     upload_dir: str = "/app/storage/pdfs"
 
