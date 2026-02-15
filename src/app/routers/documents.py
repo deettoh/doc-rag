@@ -5,14 +5,18 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.exceptions import NotFoundError
+from app.exceptions import DomainValidationError, NotFoundError
+from app.models.document import DocumentStatus
 from app.repositories.document import DocumentRepository
 from app.schemas.document import DocumentResponse, DocumentStatusResponse
 from app.schemas.retrieval import ChunkResult, RetrievalRequest, RetrievalResponse
+from app.schemas.summary import SummaryResponse
 from app.services.embedding import EmbeddingService
+from app.services.llm import LLMService
 from app.services.processing import DocumentProcessingService
 from app.services.retrieval import RetrievalService
 from app.services.storage import FileStorageService
+from app.services.summarization import SummarizationService
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -136,3 +140,52 @@ async def search_document(
             for r in results
         ],
     )
+
+
+@router.post(
+    "/{document_id}/summarize",
+    response_model=SummaryResponse,
+    summary="Generate document summary",
+    description=(
+        "Generate a summary for a fully processed document using "
+        "retrieved chunks and LLM."
+    ),
+)
+async def summarize_document(
+    document_id: int,
+    session: AsyncSession = Depends(get_db),
+) -> SummaryResponse:
+    """Generate and store a summary for a completed document."""
+    document = await DocumentRepository.get_by_id(session, document_id)
+    if document is None:
+        raise NotFoundError(resource="Document", resource_id=document_id)
+
+    if document.status != DocumentStatus.COMPLETED:
+        raise DomainValidationError(
+            f"Document must be fully processed before summarization. "
+            f"Current status: {document.status}",
+            field="status",
+        )
+
+    logger.info(
+        "Summarization requested",
+        document_id=document_id,
+    )
+
+    embedding_service = EmbeddingService()
+    retrieval_service = RetrievalService(embedding_service)
+    llm_service = LLMService()
+    summarization_service = SummarizationService(retrieval_service, llm_service)
+
+    summary = await summarization_service.generate_and_store_summary(
+        session=session,
+        document_id=document_id,
+    )
+
+    logger.info(
+        "Summarization completed",
+        document_id=document_id,
+        summary_id=summary.id,
+    )
+
+    return SummaryResponse.model_validate(summary)
