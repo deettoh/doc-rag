@@ -42,3 +42,18 @@ class QuestionRepository:
             .order_by(Question.created_at.asc())
         )
         return list(result.scalars().all())
+
+    @staticmethod
+    async def get_by_id_and_document_id(
+        session: AsyncSession,
+        question_id: int,
+        document_id: int,
+    ) -> Question | None:
+        """Retrieve a question by id scoped to a specific document."""
+        result = await session.execute(
+            select(Question).where(
+                Question.id == question_id,
+                Question.document_id == document_id,
+            )
+        )
+        return result.scalar_one_or_none()
