@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     max_questions_per_request: int = 20
     question_dedup_similarity_threshold: float = 0.9
     question_generation_max_attempts: int = 3
+    prevent_duplicate_answers: bool = True
     request_timeout_seconds: int = 30
     job_timeout_seconds: int = 300
 
