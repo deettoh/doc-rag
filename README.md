@@ -21,17 +21,3 @@
 | PDF Processing | PyMuPDF |
 | Frontend | Streamlit |
 | Deployment | Fly.io, Streamlit Community Cloud |
-
-## Getting Started
-
-```bash
-# Install dependencies
-poetry install
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your API keys
-
-# Run locally
-poetry run uvicorn app.main:app --reload
-```
