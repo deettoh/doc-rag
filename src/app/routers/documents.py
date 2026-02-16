@@ -8,6 +8,7 @@ from app.db import get_db
 from app.exceptions import DomainValidationError, NotFoundError
 from app.models.document import DocumentStatus
 from app.repositories.document import DocumentRepository
+from app.schemas.answer import AnswerResponse, AnswerSubmissionRequest
 from app.schemas.document import DocumentResponse, DocumentStatusResponse
 from app.schemas.question import (
     QuestionGenerationRequest,
@@ -16,6 +17,7 @@ from app.schemas.question import (
 )
 from app.schemas.retrieval import ChunkResult, RetrievalRequest, RetrievalResponse
 from app.schemas.summary import SummaryResponse
+from app.services.answer_evaluation import AnswerEvaluationService
 from app.services.embedding import EmbeddingService
 from app.services.llm import LLMService
 from app.services.processing import DocumentProcessingService
@@ -255,3 +257,48 @@ async def generate_document_questions(
         generated_count=len(questions),
         questions=[QuestionResponse.model_validate(question) for question in questions],
     )
+
+
+@router.post(
+    "/{document_id}/questions/{question_id}/answer",
+    response_model=AnswerResponse,
+    summary="Submit answer for a generated question",
+    description=(
+        "Submit a user answer for a generated question, evaluate it, "
+        "and store score and feedback."
+    ),
+)
+async def submit_question_answer(
+    document_id: int,
+    question_id: int,
+    request: AnswerSubmissionRequest,
+    session: AsyncSession = Depends(get_db),
+) -> AnswerResponse:
+    """Submit an answer for a generated question and persist evaluation."""
+    document = await DocumentRepository.get_by_id(session, document_id)
+    if document is None:
+        raise NotFoundError(resource="Document", resource_id=document_id)
+
+    logger.info(
+        "Answer submission requested",
+        document_id=document_id,
+        question_id=question_id,
+    )
+
+    llm_service = LLMService()
+    answer_service = AnswerEvaluationService(llm_service)
+    answer = await answer_service.submit_and_evaluate_answer(
+        session=session,
+        document_id=document_id,
+        question_id=question_id,
+        user_answer=request.user_answer,
+    )
+
+    logger.info(
+        "Answer submission completed",
+        document_id=document_id,
+        question_id=question_id,
+        answer_id=answer.id,
+    )
+
+    return AnswerResponse.model_validate(answer)
