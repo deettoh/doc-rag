@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     chunk_overlap: int = 200
     top_k_retrieval: int = 5
     max_llm_context_size: int = 4000
+    default_questions_per_document: int = 5
+    max_questions_per_request: int = 20
+    question_dedup_similarity_threshold: float = 0.9
+    question_generation_max_attempts: int = 3
     request_timeout_seconds: int = 30
     job_timeout_seconds: int = 300
 
