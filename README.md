@@ -12,6 +12,8 @@
 
 ## Tech Stack
 
+# TODO: update the tech stack
+
 | Layer | Technology |
 |-------|------------|
 | Backend | Python 3.11, FastAPI, Uvicorn |
@@ -21,3 +23,5 @@
 | PDF Processing | PyMuPDF |
 | Frontend | Streamlit |
 | Deployment | Fly.io, Streamlit Community Cloud |
+
+# TODO: complete readme.md
