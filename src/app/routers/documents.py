@@ -9,11 +9,17 @@ from app.exceptions import DomainValidationError, NotFoundError
 from app.models.document import DocumentStatus
 from app.repositories.document import DocumentRepository
 from app.schemas.document import DocumentResponse, DocumentStatusResponse
+from app.schemas.question import (
+    QuestionGenerationRequest,
+    QuestionGenerationResponse,
+    QuestionResponse,
+)
 from app.schemas.retrieval import ChunkResult, RetrievalRequest, RetrievalResponse
 from app.schemas.summary import SummaryResponse
 from app.services.embedding import EmbeddingService
 from app.services.llm import LLMService
 from app.services.processing import DocumentProcessingService
+from app.services.question_generation import QnAGenerationService
 from app.services.retrieval import RetrievalService
 from app.services.storage import FileStorageService
 from app.services.summarization import SummarizationService
@@ -189,3 +195,63 @@ async def summarize_document(
     )
 
     return SummaryResponse.model_validate(summary)
+
+
+@router.post(
+    "/{document_id}/questions",
+    response_model=QuestionGenerationResponse,
+    summary="Generate document questions",
+    description=(
+        "Generate and store study questions for a fully processed document "
+        "using retrieved chunks and LLM."
+    ),
+)
+async def generate_document_questions(
+    document_id: int,
+    request: QuestionGenerationRequest | None = None,
+    session: AsyncSession = Depends(get_db),
+) -> QuestionGenerationResponse:
+    """Generate and store questions for a completed document."""
+    if request is None:
+        request = QuestionGenerationRequest()
+
+    document = await DocumentRepository.get_by_id(session, document_id)
+    if document is None:
+        raise NotFoundError(resource="Document", resource_id=document_id)
+
+    if document.status != DocumentStatus.COMPLETED:
+        raise DomainValidationError(
+            f"Document must be fully processed before question generation. "
+            f"Current status: {document.status}",
+            field="status",
+        )
+
+    logger.info(
+        "Question generation requested",
+        document_id=document_id,
+        requested_count=request.num_questions,
+    )
+
+    embedding_service = EmbeddingService()
+    retrieval_service = RetrievalService(embedding_service)
+    llm_service = LLMService()
+    question_service = QnAGenerationService(retrieval_service, llm_service)
+
+    questions = await question_service.generate_and_store_questions(
+        session=session,
+        document_id=document_id,
+        num_questions=request.num_questions,
+    )
+
+    logger.info(
+        "Question generation completed",
+        document_id=document_id,
+        generated_count=len(questions),
+    )
+
+    return QuestionGenerationResponse(
+        document_id=document_id,
+        requested_count=request.num_questions,
+        generated_count=len(questions),
+        questions=[QuestionResponse.model_validate(question) for question in questions],
+    )
