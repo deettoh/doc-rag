@@ -2,13 +2,6 @@
 
 **RAG-based PDF Summarizer + QnA Generator**
 
-A portfolio-grade AI system demonstrating:
-- Retrieval-Augmented Generation (RAG)
-- Backend API design with FastAPI
-- Vector search using PostgreSQL + pgvector
-- LLM integration with strict boundaries
-- Production-aligned engineering practices
-
 ## Features
 
 - **PDF Upload**: Upload documents for processing
