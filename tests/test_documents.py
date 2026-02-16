@@ -309,3 +309,86 @@ class TestDocumentStatus:
             assert response.status_code == 404
             data = response.json()
             assert data["error_code"] == "NOT_FOUND"
+
+
+class TestQuestionGenerationEndpoint:
+    """Tests for POST /api/documents/{id}/questions endpoint."""
+
+    def test_generate_questions_success(self, client: TestClient) -> None:
+        """Completed document should return generated questions."""
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.EmbeddingService"),
+            patch("app.routers.documents.RetrievalService"),
+            patch("app.routers.documents.LLMService"),
+            patch("app.routers.documents.QnAGenerationService") as mock_qna_class,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_document.status = DocumentStatus.COMPLETED
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            mock_question_1 = MagicMock()
+            mock_question_1.id = 10
+            mock_question_1.document_id = 1
+            mock_question_1.content = "What is RAG?"
+            mock_question_1.expected_answer = "Retrieval-augmented generation."
+            mock_question_1.created_at = "2026-02-16T00:00:00"
+
+            mock_question_2 = MagicMock()
+            mock_question_2.id = 11
+            mock_question_2.document_id = 1
+            mock_question_2.content = "Why use embeddings?"
+            mock_question_2.expected_answer = "For semantic retrieval."
+            mock_question_2.created_at = "2026-02-16T00:00:01"
+
+            mock_qna_service = mock_qna_class.return_value
+            mock_qna_service.generate_and_store_questions = AsyncMock(
+                return_value=[mock_question_1, mock_question_2]
+            )
+
+            response = client.post(
+                "/api/documents/1/questions",
+                json={"num_questions": 2},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["document_id"] == 1
+            assert data["requested_count"] == 2
+            assert data["generated_count"] == 2
+            assert len(data["questions"]) == 2
+            assert data["questions"][0]["content"] == "What is RAG?"
+
+    def test_generate_questions_requires_completed_status(
+        self, client: TestClient
+    ) -> None:
+        """Non-completed document should return validation error."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_document.status = DocumentStatus.PROCESSING
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            response = client.post(
+                "/api/documents/1/questions",
+                json={"num_questions": 3},
+            )
+
+            assert response.status_code == 400
+            data = response.json()
+            assert data["error_code"] == "VALIDATION_ERROR"
+
+    def test_generate_questions_document_not_found(self, client: TestClient) -> None:
+        """Missing document should return NOT_FOUND."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_repo_class.get_by_id = AsyncMock(return_value=None)
+
+            response = client.post(
+                "/api/documents/999/questions",
+                json={"num_questions": 3},
+            )
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["error_code"] == "NOT_FOUND"

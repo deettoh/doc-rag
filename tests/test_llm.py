@@ -186,3 +186,29 @@ class TestRetryAndErrors:
 
         assert result.score == 0.9
         assert llm_service.client.chat.completions.create.call_count == 2
+
+    def test_generate_questions_retry_on_invalid_schema(
+        self, llm_service: LLMService
+    ) -> None:
+        """Invalid question schema should trigger one retry and recover."""
+        bad = json.dumps({"questions": [{"question": "Missing expected answer"}]})
+        good = json.dumps(
+            {
+                "questions": [
+                    {
+                        "question": "What is RAG?",
+                        "expected_answer": "Retrieval-augmented generation.",
+                    }
+                ]
+            }
+        )
+        llm_service.client.chat.completions.create.side_effect = [
+            _mock_completion(bad),
+            _mock_completion(good),
+        ]
+
+        result = llm_service.generate_questions("context", num_questions=1)
+
+        assert len(result) == 1
+        assert result[0].question == "What is RAG?"
+        assert llm_service.client.chat.completions.create.call_count == 2
