@@ -219,11 +219,86 @@ class LLMService:
         Handles cases where the LLM wraps JSON in markdown code fences.
         """
         text = raw.strip()
+        text = LLMService._strip_code_fence(text)
 
-        # Strip markdown code fences if present
+        try:
+            parsed = json.loads(text)
+            return model_class.model_validate(parsed)
+        except json.JSONDecodeError:
+            pass
+
+        try:
+            parsed, _ = json.JSONDecoder().raw_decode(text)
+            return model_class.model_validate(parsed)
+        except json.JSONDecodeError:
+            pass
+
+        candidate = LLMService._extract_balanced_json(text)
+        if candidate:
+            try:
+                parsed = json.loads(candidate)
+                return model_class.model_validate(parsed)
+            except json.JSONDecodeError:
+                repaired = LLMService._remove_trailing_commas(candidate)
+                parsed = json.loads(repaired)
+                return model_class.model_validate(parsed)
+
+        raise json.JSONDecodeError("No valid JSON object found in LLM output", text, 0)
+
+    @staticmethod
+    def _strip_code_fence(text: str) -> str:
+        """Strip markdown code fences if present."""
         fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL)
         if fence_match:
-            text = fence_match.group(1).strip()
+            return fence_match.group(1).strip()
+        return text
 
-        parsed = json.loads(text)
-        return model_class.model_validate(parsed)
+    @staticmethod
+    def _extract_balanced_json(text: str) -> str | None:
+        """Extract the first balanced JSON object/array from free-form text."""
+        start = None
+        stack: list[str] = []
+        in_string = False
+        escaped = False
+
+        for i, ch in enumerate(text):
+            if start is None:
+                if ch in "{[":
+                    start = i
+                    stack = [ch]
+                continue
+
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif ch == "\\":
+                    escaped = True
+                elif ch == '"':
+                    in_string = False
+                continue
+
+            if ch == '"':
+                in_string = True
+                continue
+
+            if ch in "{[":
+                stack.append(ch)
+                continue
+
+            if ch in "}]":
+                if not stack:
+                    continue
+                expected = "}" if stack[-1] == "{" else "]"
+                if ch == expected:
+                    stack.pop()
+                    if not stack:
+                        return text[start : i + 1]
+                else:
+                    return None
+
+        return None
+
+    @staticmethod
+    def _remove_trailing_commas(text: str) -> str:
+        """Remove trailing commas before JSON object/array closures."""
+        return re.sub(r",\s*([}\]])", r"\1", text)
