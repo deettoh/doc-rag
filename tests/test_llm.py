@@ -59,6 +59,31 @@ class TestGenerateSummary:
         result = llm_service.generate_summary("context")
         assert result.summary == "Fenced."
 
+    def test_json_with_extra_text_is_recovered(self, llm_service: LLMService) -> None:
+        """Parser should extract JSON even if model adds surrounding text."""
+        payload = (
+            'Here is the result:\n{"summary":"Recovered","page_citations":[1,2]}\n'
+            "Thanks!"
+        )
+        llm_service.client.chat.completions.create.return_value = _mock_completion(
+            payload
+        )
+
+        result = llm_service.generate_summary("context")
+        assert result.summary == "Recovered"
+        assert result.page_citations == [1, 2]
+
+    def test_trailing_commas_are_repaired(self, llm_service: LLMService) -> None:
+        """Common JSON trailing-comma mistakes should be repaired."""
+        payload = '{"summary":"Fixed commas","page_citations":[1,2,],}'
+        llm_service.client.chat.completions.create.return_value = _mock_completion(
+            payload
+        )
+
+        result = llm_service.generate_summary("context")
+        assert result.summary == "Fixed commas"
+        assert result.page_citations == [1, 2]
+
     def test_prompt_includes_context(self, llm_service: LLMService) -> None:
         """The user prompt sent to the LLM should contain the context."""
         valid = json.dumps({"summary": "ok", "page_citations": []})
