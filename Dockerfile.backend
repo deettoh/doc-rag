@@ -32,7 +32,8 @@ COPY pyproject.toml poetry.lock ./
 # Install dependencies (no dev dependencies in production)
 RUN poetry install --no-root --only main
 
-# Copy application code
+# Copy application code and Alembic config
+COPY alembic.ini ./
 COPY src/ ./src/
 
 # Create directory for PDF storage
@@ -45,5 +46,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run migrations then start the application
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
