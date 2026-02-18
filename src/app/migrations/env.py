@@ -28,11 +28,16 @@ target_metadata = Base.metadata
 
 
 def get_database_url() -> str:
-    """Get database URL from environment."""
-    return os.getenv(
+    """Get database URL from environment, normalized to psycopg (v3) driver."""
+    url = os.getenv(
         "DATABASE_URL",
         "postgresql+psycopg://postgres:postgres@localhost:5432/docrag",
     )
+    # Normalize bare 'postgresql://' to 'postgresql+psycopg://' so SQLAlchemy
+    # uses the psycopg v3 driver installed in the project.
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
 
 
 def run_migrations_offline() -> None:
