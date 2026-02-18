@@ -14,9 +14,9 @@ from app.services.storage import FileStorageService
 
 
 @pytest.fixture
-def mock_db_session() -> MagicMock:
+def mock_db_session() -> AsyncMock:
     """Create a mock async database session."""
-    return MagicMock()
+    return AsyncMock()
 
 
 @pytest.fixture

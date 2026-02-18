@@ -67,6 +67,10 @@ async def upload_document(
         file_path=file_path,
         file_size_bytes=file_size,
     )
+    # Ensure the document row is committed before background processing starts.
+    # BackgroundTasks may execute before dependency teardown commit.
+    await session.commit()
+    await session.refresh(document)
 
     logger.info(
         "Document uploaded successfully",
