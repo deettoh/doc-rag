@@ -171,6 +171,7 @@ class LLMService:
                 ],
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
+                response_format={"type": "json_object"},
             )
             return response.choices[0].message.content
         except OpenAIError as exc:
