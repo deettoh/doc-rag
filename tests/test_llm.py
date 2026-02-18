@@ -84,6 +84,24 @@ class TestGenerateSummary:
         assert result.summary == "Fixed commas"
         assert result.page_citations == [1, 2]
 
+    def test_page_citation_ranges_as_strings_are_normalized(
+        self, llm_service: LLMService
+    ) -> None:
+        """String ranges like '1-2' should be normalized to integer pages."""
+        payload = json.dumps(
+            {
+                "summary": "Range citation output.",
+                "page_citations": ["1-1", "1-2", "2-2"],
+            }
+        )
+        llm_service.client.chat.completions.create.return_value = _mock_completion(
+            payload
+        )
+
+        result = llm_service.generate_summary("context")
+        assert result.summary == "Range citation output."
+        assert result.page_citations == [1, 2]
+
     def test_prompt_includes_context(self, llm_service: LLMService) -> None:
         """The user prompt sent to the LLM should contain the context."""
         valid = json.dumps({"summary": "ok", "page_citations": []})
