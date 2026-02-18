@@ -245,6 +245,36 @@ class TestSummarizationService:
 
         mock_llm.generate_summary.assert_not_called()
 
+    async def test_uses_dedicated_summarization_top_k_default(
+        self,
+        test_session: AsyncSession,
+        completed_document: Document,
+        embedded_chunks: list[Chunk],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When top_k is omitted, service should use settings.summarization_top_k."""
+        search_results = _mock_search_results(embedded_chunks)
+
+        mock_retrieval = MagicMock(spec=RetrievalService)
+        mock_retrieval.search_similar_chunks = AsyncMock(return_value=search_results)
+
+        mock_llm = MagicMock(spec=LLMService)
+        mock_llm.generate_summary.return_value = SummaryResult(
+            summary="Uses summary top_k default.",
+            page_citations=[1],
+        )
+
+        monkeypatch.setattr(settings, "summarization_top_k", 21)
+        service = SummarizationService(mock_retrieval, mock_llm)
+
+        await service.generate_and_store_summary(
+            session=test_session,
+            document_id=completed_document.id,
+        )
+
+        call_kwargs = mock_retrieval.search_similar_chunks.call_args.kwargs
+        assert call_kwargs["top_k"] == 21
+
 
 class TestBuildContext:
     """Tests for context building logic."""
