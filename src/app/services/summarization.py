@@ -42,7 +42,7 @@ class SummarizationService:
             DomainValidationError: If no embedded chunks are found.
         """
         if top_k is None:
-            top_k = settings.top_k_retrieval
+            top_k = settings.summarization_top_k
 
         # Deferred import to avoid circular dependency
         from app.repositories.summary import SummaryRepository

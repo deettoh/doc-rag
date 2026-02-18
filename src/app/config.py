@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     chunk_size: int = 1000
     chunk_overlap: int = 200
     top_k_retrieval: int = 5
-    max_llm_context_size: int = 4000
+    summarization_top_k: int = 12
+    max_llm_context_size: int = 32000
     default_questions_per_document: int = 5
     max_questions_per_request: int = 20
     question_dedup_similarity_threshold: float = 0.9
