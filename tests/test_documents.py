@@ -392,3 +392,86 @@ class TestQuestionGenerationEndpoint:
             assert response.status_code == 404
             data = response.json()
             assert data["error_code"] == "NOT_FOUND"
+
+
+class TestAnswerSubmissionEndpoint:
+    """Tests for POST /api/documents/{id}/questions/{qid}/answer endpoint."""
+
+    def test_submit_answer_success(self, client: TestClient) -> None:
+        """Valid submission should return persisted evaluated answer."""
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.LLMService"),
+            patch("app.routers.documents.AnswerEvaluationService") as mock_eval_class,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_document.status = DocumentStatus.COMPLETED
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            mock_answer = MagicMock()
+            mock_answer.id = 50
+            mock_answer.question_id = 9
+            mock_answer.user_answer = "My answer text."
+            mock_answer.score = 0.92
+            mock_answer.feedback = "Accurate and concise."
+            mock_answer.created_at = "2026-02-16T10:30:00"
+
+            mock_eval_service = mock_eval_class.return_value
+            mock_eval_service.submit_and_evaluate_answer = AsyncMock(
+                return_value=mock_answer
+            )
+
+            response = client.post(
+                "/api/documents/1/questions/9/answer",
+                json={"user_answer": "My answer text."},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["id"] == 50
+            assert data["question_id"] == 9
+            assert data["score"] == 0.92
+            assert data["feedback"] == "Accurate and concise."
+
+    def test_submit_answer_document_not_found(self, client: TestClient) -> None:
+        """Missing document should return NOT_FOUND."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_repo_class.get_by_id = AsyncMock(return_value=None)
+
+            response = client.post(
+                "/api/documents/999/questions/9/answer",
+                json={"user_answer": "My answer text."},
+            )
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["error_code"] == "NOT_FOUND"
+
+    def test_submit_answer_question_not_found(self, client: TestClient) -> None:
+        """Missing question should return NOT_FOUND from service layer."""
+        from app.exceptions import NotFoundError
+
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.LLMService"),
+            patch("app.routers.documents.AnswerEvaluationService") as mock_eval_class,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_document.status = DocumentStatus.COMPLETED
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            mock_eval_service = mock_eval_class.return_value
+            mock_eval_service.submit_and_evaluate_answer = AsyncMock(
+                side_effect=NotFoundError(resource="Question", resource_id=9)
+            )
+
+            response = client.post(
+                "/api/documents/1/questions/9/answer",
+                json={"user_answer": "My answer text."},
+            )
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["error_code"] == "NOT_FOUND"
