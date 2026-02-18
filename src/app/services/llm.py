@@ -3,9 +3,10 @@
 import json
 import logging
 import re
+from typing import Any
 
 from openai import OpenAI, OpenAIError
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from app.config import settings
 from app.exceptions import ExternalServiceError
@@ -21,6 +22,64 @@ class SummaryResult(BaseModel):
 
     summary: str
     page_citations: list[int]
+
+    @field_validator("page_citations", mode="before")
+    @classmethod
+    def normalize_page_citations(cls, value: Any) -> Any:
+        """Normalize common model outputs (e.g. page ranges) into int citations."""
+        if value == []:
+            return []
+
+        raw_items: list[Any]
+        if isinstance(value, list):
+            raw_items = value
+        elif isinstance(value, str):
+            raw_items = [value]
+        else:
+            return value
+
+        parsed_pages: list[int] = []
+
+        for item in raw_items:
+            if isinstance(item, int):
+                parsed_pages.append(item)
+                continue
+
+            if isinstance(item, float) and item.is_integer():
+                parsed_pages.append(int(item))
+                continue
+
+            if not isinstance(item, str):
+                continue
+
+            # Handle combined tokens like "1, 2-3; page 4"
+            for token in re.split(r"[;,]\s*", item.strip()):
+                if not token:
+                    continue
+
+                numbers = [int(n) for n in re.findall(r"\d+", token)]
+                if not numbers:
+                    continue
+
+                if len(numbers) >= 2 and re.search(r"[-–—]", token):
+                    lo, hi = sorted((numbers[0], numbers[1]))
+                    parsed_pages.extend(range(lo, hi + 1))
+                else:
+                    parsed_pages.append(numbers[0])
+
+        if not parsed_pages:
+            return value
+
+        # De-duplicated in first-seen order.
+        normalized: list[int] = []
+        seen: set[int] = set()
+        for page in parsed_pages:
+            if page <= 0 or page in seen:
+                continue
+            seen.add(page)
+            normalized.append(page)
+
+        return normalized
 
 
 class QuestionResult(BaseModel):
@@ -50,7 +109,8 @@ class EvaluationResult(BaseModel):
 _SUMMARY_SYSTEM = (
     "You are a document summarization assistant. "
     "Given document excerpts, produce a concise summary and list the page "
-    "numbers referenced. Respond ONLY with valid JSON matching this schema:\n"
+    "numbers referenced. page_citations must be integers only (no strings or "
+    "ranges like '1-2'). Respond ONLY with valid JSON matching this schema:\n"
     '{"summary": "<string>", "page_citations": [<int>, ...]}'
 )
 
@@ -201,7 +261,6 @@ class LLMService:
         except (json.JSONDecodeError, ValidationError) as first_err:
             logger.warning("LLM returned invalid output, retrying once: %s", first_err)
 
-        # Retry once
         raw = self._call_llm(system_prompt, user_prompt)
         try:
             return self._parse_json(raw, model_class)
