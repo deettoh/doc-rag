@@ -29,6 +29,14 @@ class DocumentRepository:
         return document
 
     @staticmethod
+    async def get_all(session: AsyncSession) -> list[Document]:
+        """Retrieve all documents ordered by most recent first."""
+        result = await session.execute(
+            select(Document).order_by(Document.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
     async def get_by_id(session: AsyncSession, document_id: int) -> Document | None:
         """Retrieve a document by its ID."""
         result = await session.execute(

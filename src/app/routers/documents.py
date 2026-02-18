@@ -29,6 +29,20 @@ from app.services.summarization import SummarizationService
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
 
+@router.get(
+    "/",
+    response_model=list[DocumentResponse],
+    summary="List all documents",
+    description="Return all uploaded documents ordered by most recent first.",
+)
+async def list_documents(
+    session: AsyncSession = Depends(get_db),
+) -> list[DocumentResponse]:
+    """List all uploaded documents."""
+    documents = await DocumentRepository.get_all(session)
+    return [DocumentResponse.model_validate(doc) for doc in documents]
+
+
 @router.post(
     "/upload",
     response_model=DocumentResponse,
