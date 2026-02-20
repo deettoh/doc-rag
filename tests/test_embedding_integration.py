@@ -191,7 +191,10 @@ class TestEmbeddingIntegration:
         assert len(embeddings) == 2
         assert all(len(emb) == settings.embedding_dimension for emb in embeddings)
         mock_model.encode.assert_called_once_with(
-            ["First chunk", "Second chunk"], convert_to_numpy=True
+            ["First chunk", "Second chunk"],
+            batch_size=32,
+            show_progress_bar=False,
+            convert_to_numpy=True,
         )
 
     async def test_full_embed_and_store_workflow(

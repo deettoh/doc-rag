@@ -72,8 +72,9 @@ class TestEmbeddingService:
         texts = ["First chunk", "Second chunk"]
         service.generate_embeddings(texts)
 
-        # check that convert_to_numpy=True is passed
-        mock_model.encode.assert_called_once_with(texts, convert_to_numpy=True)
+        mock_model.encode.assert_called_once_with(
+            texts, batch_size=32, show_progress_bar=False, convert_to_numpy=True
+        )
 
     @patch("app.services.embedding.SentenceTransformer")
     def test_embed_chunks_extracts_content(
@@ -109,7 +110,10 @@ class TestEmbeddingService:
 
         assert len(results) == 2
         mock_model.encode.assert_called_once_with(
-            ["Hello world", "Test text"], convert_to_numpy=True
+            ["Hello world", "Test text"],
+            batch_size=32,
+            show_progress_bar=False,
+            convert_to_numpy=True,
         )
 
     @patch("app.services.embedding.SentenceTransformer")
