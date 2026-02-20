@@ -367,7 +367,7 @@ def _render_summary_tab(doc_id: int):
     if summary:
         st.markdown(summary["content"])
         if summary.get("page_citations"):
-            cited = ", ".join(str(p) for p in summary["page_citations"])
+            cited = ", ".join(str(p) for p in sorted(summary["page_citations"]))
             st.caption(f"Pages cited: {cited}")
     else:
         st.info("Click **Generate Summary** to create a summary of this document.")
