@@ -252,7 +252,7 @@ def page_upload():
             st.metric("Size", f"{size_mb:.2f} MB")
 
         if st.button("Upload & Process", type="primary", use_container_width=True):
-            with st.spinner("Uploading…"):
+            with st.spinner("Uploading… This may take a moment."):
                 result = upload_file(uploaded)
 
             if result:
