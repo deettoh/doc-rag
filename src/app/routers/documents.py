@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.exceptions import DomainValidationError, NotFoundError
 from app.models.document import DocumentStatus
+from app.repositories.answer import AnswerRepository
 from app.repositories.document import DocumentRepository
+from app.repositories.question import QuestionRepository
+from app.repositories.summary import SummaryRepository
 from app.schemas.answer import AnswerResponse, AnswerSubmissionRequest
 from app.schemas.document import DocumentResponse, DocumentStatusResponse
 from app.schemas.question import (
@@ -179,8 +182,6 @@ async def get_document_summary(
     session: AsyncSession = Depends(get_db),
 ) -> SummaryResponse:
     """Retrieve an existing summary for a document."""
-    from app.repositories.summary import SummaryRepository
-
     document = await DocumentRepository.get_by_id(session, document_id)
     if document is None:
         raise NotFoundError(resource="Document", resource_id=document_id)
@@ -252,8 +253,6 @@ async def get_document_questions(
     session: AsyncSession = Depends(get_db),
 ) -> list[QuestionResponse]:
     """Retrieve all existing questions for a document."""
-    from app.repositories.question import QuestionRepository
-
     document = await DocumentRepository.get_by_id(session, document_id)
     if document is None:
         raise NotFoundError(resource="Document", resource_id=document_id)
@@ -334,8 +333,6 @@ async def get_question_answer(
     session: AsyncSession = Depends(get_db),
 ) -> AnswerResponse:
     """Retrieve the latest evaluation for a question."""
-    from app.repositories.answer import AnswerRepository
-
     document = await DocumentRepository.get_by_id(session, document_id)
     if document is None:
         raise NotFoundError(resource="Document", resource_id=document_id)
