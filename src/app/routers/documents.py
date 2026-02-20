@@ -168,6 +168,30 @@ async def search_document(
     )
 
 
+@router.get(
+    "/{document_id}/summary",
+    response_model=SummaryResponse,
+    summary="Get existing document summary",
+    description="Retrieve the most recent summary for a document if it exists.",
+)
+async def get_document_summary(
+    document_id: int,
+    session: AsyncSession = Depends(get_db),
+) -> SummaryResponse:
+    """Retrieve an existing summary for a document."""
+    from app.repositories.summary import SummaryRepository
+
+    document = await DocumentRepository.get_by_id(session, document_id)
+    if document is None:
+        raise NotFoundError(resource="Document", resource_id=document_id)
+
+    summary = await SummaryRepository.get_by_document_id(session, document_id)
+    if summary is None:
+        raise NotFoundError(resource="Summary", resource_id=document_id)
+
+    return SummaryResponse.model_validate(summary)
+
+
 @router.post(
     "/{document_id}/summarize",
     response_model=SummaryResponse,
@@ -215,6 +239,27 @@ async def summarize_document(
     )
 
     return SummaryResponse.model_validate(summary)
+
+
+@router.get(
+    "/{document_id}/questions",
+    response_model=list[QuestionResponse],
+    summary="Get existing document questions",
+    description="Retrieve all previously generated questions for a document.",
+)
+async def get_document_questions(
+    document_id: int,
+    session: AsyncSession = Depends(get_db),
+) -> list[QuestionResponse]:
+    """Retrieve all existing questions for a document."""
+    from app.repositories.question import QuestionRepository
+
+    document = await DocumentRepository.get_by_id(session, document_id)
+    if document is None:
+        raise NotFoundError(resource="Document", resource_id=document_id)
+
+    questions = await QuestionRepository.get_by_document_id(session, document_id)
+    return [QuestionResponse.model_validate(q) for q in questions]
 
 
 @router.post(
@@ -275,6 +320,31 @@ async def generate_document_questions(
         generated_count=len(questions),
         questions=[QuestionResponse.model_validate(question) for question in questions],
     )
+
+
+@router.get(
+    "/{document_id}/questions/{question_id}/answer",
+    response_model=AnswerResponse,
+    summary="Get latest evaluation for a question",
+    description="Retrieve the most recent evaluation and feedback for a specific question.",
+)
+async def get_question_answer(
+    document_id: int,
+    question_id: int,
+    session: AsyncSession = Depends(get_db),
+) -> AnswerResponse:
+    """Retrieve the latest evaluation for a question."""
+    from app.repositories.answer import AnswerRepository
+
+    document = await DocumentRepository.get_by_id(session, document_id)
+    if document is None:
+        raise NotFoundError(resource="Document", resource_id=document_id)
+
+    answer = await AnswerRepository.get_latest_by_question_id(session, question_id)
+    if answer is None:
+        raise NotFoundError(resource="Answer", resource_id=question_id)
+
+    return AnswerResponse.model_validate(answer)
 
 
 @router.post(

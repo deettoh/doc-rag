@@ -121,6 +121,16 @@ def upload_file(file) -> dict | None:
         return None
 
 
+def fetch_summary(doc_id: int) -> dict | None:
+    """Fetches an existing summary for a document from the backend."""
+    try:
+        r = _get(f"/documents/{doc_id}/summary")
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return None
+
+
 def generate_summary(doc_id: int) -> dict | None:
     """Triggers the generation of a document summary on the backend."""
     try:
@@ -134,6 +144,16 @@ def generate_summary(doc_id: int) -> dict | None:
     except Exception as exc:
         st.error(f"Summarization failed: {exc}")
         return None
+
+
+def fetch_questions(doc_id: int) -> list[dict]:
+    """Fetches existing generated questions for a document."""
+    try:
+        r = _get(f"/documents/{doc_id}/questions")
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return []
 
 
 def generate_questions(doc_id: int, num: int = 5) -> dict | None:
@@ -151,6 +171,16 @@ def generate_questions(doc_id: int, num: int = 5) -> dict | None:
         return None
     except Exception as exc:
         st.error(f"Question generation failed: {exc}")
+        return None
+
+
+def fetch_answer(doc_id: int, question_id: int) -> dict | None:
+    """Fetches the latest evaluation for a specific question."""
+    try:
+        r = _get(f"/documents/{doc_id}/questions/{question_id}/answer")
+        r.raise_for_status()
+        return r.json()
+    except Exception:
         return None
 
 
@@ -356,6 +386,12 @@ def page_document():
 def _render_summary_tab(doc_id: int):
     """Internal helper to render the summary tab content."""
     st.subheader("Document Summary")
+    summary = st.session_state.get(f"summary_{doc_id}")
+    if not summary:
+        summary = fetch_summary(doc_id)
+        if summary:
+            st.session_state[f"summary_{doc_id}"] = summary
+
     if st.button("Generate Summary", type="primary", key="gen_summary"):
         with st.spinner("Generating summary… This may take a moment."):
             result = generate_summary(doc_id)
@@ -363,7 +399,6 @@ def _render_summary_tab(doc_id: int):
             st.session_state[f"summary_{doc_id}"] = result
             st.rerun()
 
-    summary = st.session_state.get(f"summary_{doc_id}")
     if summary:
         st.markdown(summary["content"])
         if summary.get("page_citations"):
@@ -376,6 +411,12 @@ def _render_summary_tab(doc_id: int):
 def _render_questions_tab(doc_id: int):
     """Internal helper to render the study questions tab content."""
     st.subheader("Study Questions")
+
+    questions = st.session_state.get(f"questions_{doc_id}", [])
+    if not questions:
+        questions = fetch_questions(doc_id)
+        if questions:
+            st.session_state[f"questions_{doc_id}"] = questions
 
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -406,6 +447,11 @@ def _render_questions_tab(doc_id: int):
 
             answer_key = f"answer_result_{doc_id}_{q['id']}"
             existing_answer = st.session_state.get(answer_key)
+
+            if not existing_answer:
+                existing_answer = fetch_answer(doc_id, q["id"])
+                if existing_answer:
+                    st.session_state[answer_key] = existing_answer
 
             if existing_answer:
                 _display_answer_result(existing_answer)
