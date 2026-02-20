@@ -73,19 +73,34 @@ class DocumentProcessingService:
                 )
 
                 if db_chunks:
-                    embeddings = self.embedding_service.embed_chunks(chunks)
-                    chunk_ids = [c.id for c in db_chunks]
+                    batch_size = 100
+                    for i in range(0, len(db_chunks), batch_size):
+                        batch_db_chunks = db_chunks[i : i + batch_size]
+                        batch_chunks = chunks[i : i + batch_size]
 
-                    await ChunkRepository.update_embeddings(
-                        session, chunk_ids, embeddings
-                    )
-                    await session.commit()
+                        logger.info(
+                            "Processing embedding batch",
+                            document_id=document_id,
+                            batch_start=i,
+                            batch_end=i + len(batch_db_chunks),
+                            total=len(db_chunks),
+                        )
 
-                    logger.info(
-                        "Embedding complete",
-                        document_id=document_id,
-                        embedded_count=len(embeddings),
-                    )
+                        batch_embeddings = self.embedding_service.embed_chunks(
+                            batch_chunks
+                        )
+                        batch_ids = [c.id for c in batch_db_chunks]
+
+                        await ChunkRepository.update_embeddings(
+                            session, batch_ids, batch_embeddings
+                        )
+                        await session.commit()
+
+                        logger.info(
+                            "Batch embedding complete",
+                            document_id=document_id,
+                            batch_end=i + len(batch_db_chunks),
+                        )
 
                 await DocumentRepository.update_status(
                     session, document_id, DocumentStatus.COMPLETED

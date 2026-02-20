@@ -14,12 +14,15 @@ class EmbeddingService:
         self.model = SentenceTransformer(model_name)
         self.dimension = settings.embedding_dimension
 
-    def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
+    def generate_embeddings(
+        self, texts: list[str], batch_size: int = 32
+    ) -> list[list[float]]:
         """
-        Generate embeddings for a list of texts.
+        Generate embeddings for a list of texts in batches.
 
         Args:
             texts: List of text strings to embed
+            batch_size: Number of texts to process at once internally
 
         Returns:
             List of embedding vectors (each 768-dim for bge-base-en-v1.5)
@@ -27,7 +30,9 @@ class EmbeddingService:
         if not texts:
             return []
 
-        embeddings = self.model.encode(texts, convert_to_numpy=True)
+        embeddings = self.model.encode(
+            texts, batch_size=batch_size, show_progress_bar=False, convert_to_numpy=True
+        )
         return embeddings.tolist()
 
     def embed_chunks(self, chunks: list[ChunkData]) -> list[list[float]]:
