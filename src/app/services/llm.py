@@ -124,6 +124,7 @@ _QUESTIONS_SYSTEM = (
 _EVALUATION_SYSTEM = (
     "You are an answer evaluation assistant. "
     "Compare the user's answer to the expected answer and score it. "
+    "Provide feedback that also contains the correct answer"
     "Respond ONLY with valid JSON matching this schema:\n"
     '{"score": <float 0.0-1.0>, "feedback": "<string>"}'
 )
