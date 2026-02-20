@@ -124,6 +124,34 @@ def upload_file(file) -> dict | None:
 # endregion ----------------------------------------------------
 
 
+# region -------------------- Sidebar --------------------
+def render_sidebar():
+    """Renders the application's sidebar for navigation and document selection."""
+    with st.sidebar:
+        st.title("DocRAG")
+        st.caption("RAG-based PDF Summarizer + QnA Generator")
+
+        if check_backend_health():
+            st.success("Backend connected")
+        else:
+            st.error("Backend disconnected")
+            return
+
+        st.divider()
+
+        st.subheader("Navigation")
+        pages = {
+            "upload": "Upload Document",
+        }
+        for key, label in pages.items():
+            if st.button(label, key=f"nav_{key}", use_container_width=True):
+                st.session_state.page = key
+                st.rerun()
+
+
+# endregion -----------------------------------------------
+
+
 # region -------------------- Page: Upload --------------------
 def page_upload():
     """Renders the document upload page."""
@@ -192,15 +220,7 @@ def page_upload():
 # region -------------------- Main --------------------
 def main():
     """Main application entry point."""
-    st.title("DocRAG")
-    st.subheader("RAG-based PDF Summarizer + QnA Generator")
-
-    with st.sidebar:
-        st.header("System Status")
-        if check_backend_health():
-            st.success("Backend: Connected")
-        else:
-            st.error("Backend: Disconnected")
+    render_sidebar()
 
     page_upload()
 
