@@ -148,6 +148,31 @@ def render_sidebar():
                 st.session_state.page = key
                 st.rerun()
 
+        st.divider()
+
+        st.subheader("Documents")
+        docs = fetch_documents()
+        st.session_state.documents = docs
+
+        if not docs:
+            st.info("No documents uploaded yet.")
+            return
+
+        doc_options = {d["id"]: f"{d['filename']}" for d in docs}
+        selected = st.selectbox(
+            "Select Document",
+            options=list(doc_options.keys()),
+            format_func=lambda x: doc_options[x],
+            index=(
+                list(doc_options.keys()).index(st.session_state.selected_doc_id)
+                if st.session_state.selected_doc_id in doc_options
+                else 0
+            ),
+        )
+        if selected != st.session_state.selected_doc_id:
+            st.session_state.selected_doc_id = selected
+            st.rerun()
+
 
 # endregion -----------------------------------------------
 
