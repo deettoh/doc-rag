@@ -241,7 +241,6 @@ def page_upload():
     uploaded = st.file_uploader(
         "Choose a PDF file",
         type=["pdf"],
-        help="Maximum file size depends on server configuration (default 10 MB).",
     )
 
     if uploaded is not None:

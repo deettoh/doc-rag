@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/docrag"
 
     # Application Settings
-    max_upload_size_mb: int = 10
+    max_upload_size_mb: int = 50
     chunk_size: int = 1000
     chunk_overlap: int = 200
     top_k_retrieval: int = 5
