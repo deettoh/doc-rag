@@ -475,3 +475,284 @@ class TestAnswerSubmissionEndpoint:
             assert response.status_code == 404
             data = response.json()
             assert data["error_code"] == "NOT_FOUND"
+
+
+class TestListDocumentsEndpoint:
+    """Tests for GET /api/documents/ endpoint."""
+
+    def test_list_documents_returns_documents(self, client: TestClient) -> None:
+        """Should return a list of documents."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_doc = MagicMock()
+            mock_doc.id = 1
+            mock_doc.filename = "test.pdf"
+            mock_doc.file_size_bytes = 1024
+            mock_doc.status = DocumentStatus.COMPLETED
+            mock_doc.created_at = "2026-01-01T00:00:00"
+            mock_repo_class.get_all = AsyncMock(return_value=[mock_doc])
+
+            response = client.get("/api/documents/")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 1
+            assert data[0]["id"] == 1
+            assert data[0]["filename"] == "test.pdf"
+
+    def test_list_documents_empty(self, client: TestClient) -> None:
+        """Should return empty list when no documents exist."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_repo_class.get_all = AsyncMock(return_value=[])
+
+            response = client.get("/api/documents/")
+
+            assert response.status_code == 200
+            assert response.json() == []
+
+
+class TestSummarizationEndpoint:
+    """Tests for summarization endpoints."""
+
+    def test_summarize_document_success(self, client: TestClient) -> None:
+        """Completed document should return generated summary."""
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.EmbeddingService"),
+            patch("app.routers.documents.RetrievalService"),
+            patch("app.routers.documents.LLMService"),
+            patch("app.routers.documents.SummarizationService") as mock_summ_class,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_document.status = DocumentStatus.COMPLETED
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            mock_summary = MagicMock()
+            mock_summary.id = 5
+            mock_summary.document_id = 1
+            mock_summary.content = "This is a summary."
+            mock_summary.page_citations = [1, 2, 3]
+            mock_summary.created_at = "2026-02-20T00:00:00"
+
+            mock_service = mock_summ_class.return_value
+            mock_service.generate_and_store_summary = AsyncMock(
+                return_value=mock_summary
+            )
+
+            response = client.post("/api/documents/1/summarize")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["id"] == 5
+            assert data["document_id"] == 1
+            assert data["content"] == "This is a summary."
+            assert data["page_citations"] == [1, 2, 3]
+
+    def test_summarize_requires_completed_status(self, client: TestClient) -> None:
+        """Non-completed document should return validation error."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_document.status = DocumentStatus.PROCESSING
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            response = client.post("/api/documents/1/summarize")
+
+            assert response.status_code == 400
+            data = response.json()
+            assert data["error_code"] == "VALIDATION_ERROR"
+
+    def test_summarize_document_not_found(self, client: TestClient) -> None:
+        """Missing document should return NOT_FOUND."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_repo_class.get_by_id = AsyncMock(return_value=None)
+
+            response = client.post("/api/documents/999/summarize")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["error_code"] == "NOT_FOUND"
+
+    def test_get_summary_success(self, client: TestClient) -> None:
+        """Should return existing summary for a document."""
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.SummaryRepository") as mock_summ_repo,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            mock_summary = MagicMock()
+            mock_summary.id = 5
+            mock_summary.document_id = 1
+            mock_summary.content = "Persisted summary."
+            mock_summary.page_citations = [1]
+            mock_summary.created_at = "2026-02-20T00:00:00"
+            mock_summ_repo.get_by_document_id = AsyncMock(return_value=mock_summary)
+
+            response = client.get("/api/documents/1/summary")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["content"] == "Persisted summary."
+
+    def test_get_summary_not_found(self, client: TestClient) -> None:
+        """Should return NOT_FOUND when no summary exists."""
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.SummaryRepository") as mock_summ_repo,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+            mock_summ_repo.get_by_document_id = AsyncMock(return_value=None)
+
+            response = client.get("/api/documents/1/summary")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["error_code"] == "NOT_FOUND"
+
+
+class TestSearchEndpoint:
+    """Tests for POST /api/documents/{id}/search endpoint."""
+
+    def test_search_success(self, client: TestClient) -> None:
+        """Valid search should return chunk results."""
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.EmbeddingService"),
+            patch("app.routers.documents.RetrievalService") as mock_retrieval_class,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            mock_result = MagicMock()
+            mock_result.chunk_id = 10
+            mock_result.chunk_index = 0
+            mock_result.content = "Relevant chunk text."
+            mock_result.page_start = 1
+            mock_result.page_end = 1
+            mock_result.score = 0.92
+
+            mock_service = mock_retrieval_class.return_value
+            mock_service.search_similar_chunks = AsyncMock(return_value=[mock_result])
+
+            response = client.post(
+                "/api/documents/1/search",
+                json={"query": "test query"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["document_id"] == 1
+            assert data["query"] == "test query"
+            assert len(data["results"]) == 1
+            assert data["results"][0]["content"] == "Relevant chunk text."
+            assert data["results"][0]["score"] == 0.92
+
+    def test_search_document_not_found(self, client: TestClient) -> None:
+        """Missing document should return NOT_FOUND."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_repo_class.get_by_id = AsyncMock(return_value=None)
+
+            response = client.post(
+                "/api/documents/999/search",
+                json={"query": "test query"},
+            )
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["error_code"] == "NOT_FOUND"
+
+
+class TestGetQuestionsEndpoint:
+    """Tests for GET /api/documents/{id}/questions endpoint."""
+
+    def test_get_questions_success(self, client: TestClient) -> None:
+        """Should return persisted questions for a document."""
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.QuestionRepository") as mock_q_repo,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            mock_question = MagicMock()
+            mock_question.id = 10
+            mock_question.document_id = 1
+            mock_question.content = "What is RAG?"
+            mock_question.expected_answer = "Retrieval-augmented generation."
+            mock_question.created_at = "2026-02-16T00:00:00"
+            mock_q_repo.get_by_document_id = AsyncMock(return_value=[mock_question])
+
+            response = client.get("/api/documents/1/questions")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 1
+            assert data[0]["content"] == "What is RAG?"
+
+    def test_get_questions_document_not_found(self, client: TestClient) -> None:
+        """Missing document should return NOT_FOUND."""
+        with patch("app.routers.documents.DocumentRepository") as mock_repo_class:
+            mock_repo_class.get_by_id = AsyncMock(return_value=None)
+
+            response = client.get("/api/documents/999/questions")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["error_code"] == "NOT_FOUND"
+
+
+class TestGetAnswerEndpoint:
+    """Tests for GET /api/documents/{id}/questions/{qid}/answer endpoint."""
+
+    def test_get_answer_success(self, client: TestClient) -> None:
+        """Should return the latest evaluation for a question."""
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.AnswerRepository") as mock_answer_repo,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+
+            mock_answer = MagicMock()
+            mock_answer.id = 50
+            mock_answer.question_id = 9
+            mock_answer.user_answer = "My answer."
+            mock_answer.score = 0.85
+            mock_answer.feedback = "Good."
+            mock_answer.created_at = "2026-02-20T00:00:00"
+            mock_answer_repo.get_latest_by_question_id = AsyncMock(
+                return_value=mock_answer
+            )
+
+            response = client.get("/api/documents/1/questions/9/answer")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["id"] == 50
+            assert data["score"] == 0.85
+            assert data["feedback"] == "Good."
+
+    def test_get_answer_not_found(self, client: TestClient) -> None:
+        """Should return NOT_FOUND when no answer exists."""
+        with (
+            patch("app.routers.documents.DocumentRepository") as mock_repo_class,
+            patch("app.routers.documents.AnswerRepository") as mock_answer_repo,
+        ):
+            mock_document = MagicMock()
+            mock_document.id = 1
+            mock_repo_class.get_by_id = AsyncMock(return_value=mock_document)
+            mock_answer_repo.get_latest_by_question_id = AsyncMock(return_value=None)
+
+            response = client.get("/api/documents/1/questions/9/answer")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["error_code"] == "NOT_FOUND"
