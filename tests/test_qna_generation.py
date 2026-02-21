@@ -1,6 +1,7 @@
 """Integration tests for the question generation feature."""
 
-from unittest.mock import AsyncMock, MagicMock
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -241,6 +242,58 @@ class TestQnAGenerationService:
             )
 
         mock_llm.generate_questions.assert_not_called()
+
+    async def test_llm_recovery_on_invalid_output(
+        self,
+        test_session: AsyncSession,
+        completed_document: Document,
+        embedded_chunks: list[Chunk],
+    ) -> None:
+        """LLM returns invalid schema first, valid on retry; QnA generation succeeds."""
+        search_results = _mock_search_results(embedded_chunks)
+
+        mock_retrieval = MagicMock(spec=RetrievalService)
+        mock_retrieval.search_similar_chunks = AsyncMock(return_value=search_results)
+
+        with patch("app.services.llm.OpenAI"):
+            llm_service = LLMService(api_key="test-key")
+
+        bad_json = json.dumps({"questions": [{"question": "Missing expected answer"}]})
+        good_json = json.dumps(
+            {
+                "questions": [
+                    {
+                        "question": "What is Nasi Lemak?",
+                        "expected_answer": "A Malaysian dish.",
+                    }
+                ]
+            }
+        )
+        choice_bad = MagicMock()
+        choice_bad.message.content = bad_json
+        resp_bad = MagicMock()
+        resp_bad.choices = [choice_bad]
+
+        choice_good = MagicMock()
+        choice_good.message.content = good_json
+        resp_good = MagicMock()
+        resp_good.choices = [choice_good]
+
+        llm_service.client.chat.completions.create.side_effect = [
+            resp_bad,
+            resp_good,
+        ]
+
+        service = QnAGenerationService(mock_retrieval, llm_service)
+        questions = await service.generate_and_store_questions(
+            session=test_session,
+            document_id=completed_document.id,
+            num_questions=1,
+        )
+
+        assert len(questions) == 1
+        assert questions[0].content == "What is Nasi Lemak?"
+        assert llm_service.client.chat.completions.create.call_count == 2
 
 
 class TestQuestionRepository:

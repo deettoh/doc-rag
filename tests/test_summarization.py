@@ -1,7 +1,7 @@
 """Integration tests for the summarization feature."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -274,6 +274,51 @@ class TestSummarizationService:
 
         call_kwargs = mock_retrieval.search_similar_chunks.call_args.kwargs
         assert call_kwargs["top_k"] == 21
+
+    async def test_llm_recovery_on_invalid_output(
+        self,
+        test_session: AsyncSession,
+        completed_document: Document,
+        embedded_chunks: list[Chunk],
+    ) -> None:
+        """LLM returns invalid JSON on first try, valid on retry; summarization succeeds."""
+        search_results = _mock_search_results(embedded_chunks)
+
+        mock_retrieval = MagicMock(spec=RetrievalService)
+        mock_retrieval.search_similar_chunks = AsyncMock(return_value=search_results)
+
+        # Real LLMService with mocked OpenAI client
+        with patch("app.services.llm.OpenAI"):
+            llm_service = LLMService(api_key="test-key")
+
+        valid_json = json.dumps(
+            {"summary": "Recovered summary.", "page_citations": [1, 3]}
+        )
+        choice_bad = MagicMock()
+        choice_bad.message.content = "NOT VALID JSON {{"
+        resp_bad = MagicMock()
+        resp_bad.choices = [choice_bad]
+
+        choice_good = MagicMock()
+        choice_good.message.content = valid_json
+        resp_good = MagicMock()
+        resp_good.choices = [choice_good]
+
+        llm_service.client.chat.completions.create.side_effect = [
+            resp_bad,
+            resp_good,
+        ]
+
+        service = SummarizationService(mock_retrieval, llm_service)
+
+        summary = await service.generate_and_store_summary(
+            session=test_session,
+            document_id=completed_document.id,
+        )
+
+        assert summary.content == "Recovered summary."
+        assert json.loads(summary.page_citations) == [1, 3]
+        assert llm_service.client.chat.completions.create.call_count == 2
 
 
 class TestBuildContext:

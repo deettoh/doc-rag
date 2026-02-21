@@ -95,13 +95,11 @@ class TestDocumentProcessingService:
 
             await processing_service.process_document(1, "/path/to/doc.pdf")
 
-            # Verify status transitions
             status_calls = mock_doc_repo.update_status.call_args_list
             assert len(status_calls) == 2
             assert status_calls[0].args[1:] == (1, DocumentStatus.PROCESSING)
             assert status_calls[1].args[1:] == (1, DocumentStatus.COMPLETED)
 
-            # Verify pipeline steps were called
             mock_pdf_extractor.extract_text.assert_called_once_with("/path/to/doc.pdf")
             mock_doc_repo.update_page_count.assert_called_once()
             mock_chunking_service.chunk_pages.assert_called_once()
@@ -207,3 +205,44 @@ class TestDocumentProcessingService:
             # Should still complete successfully
             final_status = mock_doc_repo.update_status.call_args_list[-1]
             assert final_status.args[2] == DocumentStatus.COMPLETED
+
+    @pytest.mark.asyncio
+    async def test_corrupt_pdf_sets_failed_status(
+        self,
+        mock_chunking_service: MagicMock,
+        mock_embedding_service: MagicMock,
+    ) -> None:
+        """Corrupt PDF should transition status to FAILED with descriptive error."""
+        from app.exceptions import DomainValidationError
+
+        mock_session = _make_mock_session()
+        corrupt_extractor = MagicMock()
+        corrupt_extractor.extract_text.side_effect = DomainValidationError(
+            message="Failed to open PDF: file is corrupted or damaged",
+            field="file_path",
+        )
+
+        service = DocumentProcessingService(
+            pdf_extractor=corrupt_extractor,
+            chunking_service=mock_chunking_service,
+            embedding_service=mock_embedding_service,
+        )
+
+        with (
+            patch("app.services.processing.async_session_factory") as mock_factory,
+            patch("app.repositories.document.DocumentRepository") as mock_doc_repo,
+        ):
+            mock_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            mock_doc_repo.update_status = AsyncMock()
+
+            await service.process_document(1, "/path/to/corrupt.pdf")
+
+            final_status = mock_doc_repo.update_status.call_args_list[-1]
+            assert final_status.args[2] == DocumentStatus.FAILED
+            error_msg = final_status.kwargs.get("error_message", "")
+            assert "Failed to open PDF" in error_msg
+
+            mock_chunking_service.chunk_pages.assert_not_called()
+            mock_embedding_service.embed_chunks.assert_not_called()
