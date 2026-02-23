@@ -4,7 +4,7 @@
 services:
   # PostgreSQL Database with pgvector extension
   db:
-    image: pgvector/pgvector:pg15
+    image: pgvector/pgvector:pg17
     container_name: docrag-db
     environment:
       POSTGRES_USER: postgres
