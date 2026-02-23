@@ -81,7 +81,7 @@ flowchart TB
 | Backend | Python 3.11, FastAPI, Uvicorn |
 | LLM | Llama 3.1 8B via Groq API |
 | Embeddings | BAAI/bge-base-en-v1.5 (SentenceTransformers, local) |
-| Database | PostgreSQL 15 + pgvector |
+| Database | PostgreSQL 17 + pgvector |
 | PDF Processing | PyMuPDF |
 | Chunking | LangChain RecursiveCharacterTextSplitter |
 | Frontend | Streamlit |
