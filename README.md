@@ -215,5 +215,5 @@ doc-rag/
 ├── tests/                      # Unit, integration, and E2E tests
 ├── docker-compose.yml          # Local development orchestration
 ├── Dockerfile.backend          # Backend container definition
-├── Dockerfile.frontend         # Frontend container definition
+└── Dockerfile.frontend         # Frontend container definition
 ```
