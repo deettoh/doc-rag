@@ -9,7 +9,7 @@ import streamlit as st
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 API_BASE = f"{BACKEND_URL}/api"
-REQUEST_TIMEOUT = 60.0
+REQUEST_TIMEOUT = 300.0
 
 
 st.set_page_config(
