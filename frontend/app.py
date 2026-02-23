@@ -354,7 +354,7 @@ def page_document():
         st.metric("Pages", pages if pages else "—")
     with col3:
         size_mb = doc_meta["file_size_bytes"] / (1024 * 1024)
-        st.metric("Size", f"{size_mb:.1f} MB")
+        st.metric("Size", f"{size_mb:.2f} MB")
 
     if status_data["status"] == "processing":
         st.info("Document is still being processed. Please wait…")
