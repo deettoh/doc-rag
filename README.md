@@ -183,37 +183,37 @@ poetry run ruff format --check .
 ```
 doc-rag/
 ├── src/app/
-│   ├── main.py                 # FastAPI app entrypoint
-│   ├── config.py               # pydantic-settings configuration
-│   ├── db.py                   # Database session management
-│   ├── middleware.py            # Request ID logging middleware
-│   ├── exception_handlers.py   # Centralized error handling
-│   ├── exceptions.py           # Custom exception classes
-│   ├── models/                 # SQLAlchemy ORM models
+│   ├── main.py                    # FastAPI app entrypoint
+│   ├── config.py                  # pydantic-settings configuration
+│   ├── db.py                      # Database session management
+│   ├── middleware.py              # Request ID logging middleware
+│   ├── exception_handlers.py      # Centralized error handling
+│   ├── exceptions.py              # Custom exception classes
+│   ├── models/                    # SQLAlchemy ORM models
 │   │   ├── document.py
 │   │   ├── chunk.py
 │   │   ├── summary.py
 │   │   ├── question.py
 │   │   └── answer.py
-│   ├── repositories/           # Database access layer
-│   ├── routers/                # API endpoint definitions
-│   │   └── documents.py        # Main document API endpoints
-│   ├── schemas/                # Pydantic request/response models
-│   └── services/               # Business logic
-│       ├── pdf_extractor.py    # PDF text extraction + cleanup
-│       ├── chunking.py         # Text chunking with metadata
-│       ├── embedding.py        # SentenceTransformer embeddings
-│       ├── retrieval.py        # Similarity search
-│       ├── llm.py              # Groq API wrapper
-│       ├── summarization.py    # Summary generation
+│   ├── repositories/              # Database access layer
+│   ├── routers/                   # API endpoint definitions
+│   │   └── documents.py           # Main document API endpoints
+│   ├── schemas/                   # Pydantic request/response models
+│   └── services/                  # Business logic
+│       ├── pdf_extractor.py       # PDF text extraction + cleanup
+│       ├── chunking.py            # Text chunking with metadata
+│       ├── embedding.py           # SentenceTransformer embeddings
+│       ├── retrieval.py           # Similarity search
+│       ├── llm.py                 # Groq API wrapper
+│       ├── summarization.py       # Summary generation
 │       ├── question_generation.py # Automated study question generation
-│       ├── answer_evaluation.py # AI-powered grading and feedback
-│       ├── processing.py       # Background job orchestration
-│       └── storage.py          # File storage management
+│       ├── answer_evaluation.py   # AI-powered grading and feedback
+│       ├── processing.py          # Background job orchestration
+│       └── storage.py             # File storage management
 ├── frontend/
-│   └── app.py                  # Streamlit frontend
-├── tests/                      # Unit, integration, and E2E tests
-├── docker-compose.yml          # Local development orchestration
-├── Dockerfile.backend          # Backend container definition
-└── Dockerfile.frontend         # Frontend container definition
+│   └── app.py                     # Streamlit frontend
+├── tests/                         # Unit, integration, and E2E tests
+├── docker-compose.yml             # Local development orchestration
+├── Dockerfile.backend             # Backend container definition
+└── Dockerfile.frontend            # Frontend container definition
 ```
