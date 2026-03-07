@@ -2,29 +2,26 @@
 
 **A RAG system for PDF summarization, and study Q&A generation**
 
-DocRAG is a full-stack AI application that demonstrates Retrieval-Augmented Generation (RAG) with clean backend architecture, vector search, and LLM integration. Upload any PDF and the system will extract, chunk, and embed the content. It will then use it to generate summaries with page citations, study questions, and AI-graded answers.
+DocRAG is a full stack AI application that implements a Retrieval-Augmented Generation (RAG) pipeline for working with PDF documents. It includes document retrieval, vector embeddings, and large language models that perform summarization, question generation, and answer evaluation for study purposes.
 
 ---
 
 ## Features
 
 - **PDF Upload and Processing** 
-Upload PDF documents with automatic text extraction, cleanup, chunking, and embedding generation, all handled as a background job with real-time status tracking.
+Uploaded PDF documents go through text extraction, cleanup, chunking, and embedding generation. The PDF metadata, chunks, and their corresponding embeddings are persisted in the database.
 
 - **AI-Powered Summarization** 
-Generate concise document summaries from the most relevant chunks, with page citations linking each point back to the source material.
+Relevant chunks are retrieved and sent to a language model to generate a concise summary with page citations.
 
 - **Study Question Generation** 
-Automatically produce study questions from document content with similarity-based deduplication to ensure variety.
+The system generates study questions from the document and removes similar ones using similarity based deduplication.
 
 - **Answer Evaluation** 
-Submit answers to generated questions and receive AI-powered scoring and feedback using an LLM judge.
-
-- **Document Chat** 
-Ask free-form questions about your document and receive answers grounded in the most relevant passages via similarity search.
+Users can submit answers to generated questions. A language model evaluates the response and provides a score and feedback.
 
 - **Background Processing with Status Tracking** 
-Long-running operations (extraction, chunking, embedding) run asynchronously with persistent status updates (`uploaded` -> `processing` -> `completed` / `failed`).
+Long running operations (extraction, chunking, embedding) run asynchronously with persistent status updates (`uploaded` -> `processing` -> `completed` / `failed`).
 
 ---
 
@@ -87,7 +84,7 @@ flowchart TB
 | Frontend | Streamlit |
 | Configuration | pydantic-settings |
 | Migrations | Alembic |
-| Deployment | Render (backend + DB), Streamlit Community Cloud (frontend) |
+| Deployment | In-progress|
 | Tooling | Poetry, Docker, pytest, ruff |
 
 ---
@@ -100,7 +97,7 @@ All endpoints are under the `/api` prefix.
 |---|---|---|
 | `GET` | `/health` | Health check |
 | `GET` | `/api/documents/` | List all uploaded documents |
-| `POST` | `/api/documents/` | Upload a PDF and start background processing |
+| `POST` | `/api/documents/upload` | Upload a PDF and start background processing |
 | `GET` | `/api/documents/{id}/status` | Get document processing status |
 | `POST` | `/api/documents/{id}/search` | Similarity search within a document |
 | `GET` | `/api/documents/{id}/summary` | Retrieve existing summary |
