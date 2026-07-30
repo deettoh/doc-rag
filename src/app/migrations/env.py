@@ -2,7 +2,7 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import create_engine, pool
+from sqlalchemy import Connection, create_engine, pool, text
 
 from app.models import Answer, Base, Chunk, Document, Question, Summary  # noqa: F401
 
@@ -38,6 +38,12 @@ def get_database_url() -> str:
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+psycopg://", 1)
     return url
+
+
+def ensure_pgvector_extension(connection: Connection) -> None:
+    """Create the extension that the Vector columns depend on."""
+    connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    connection.commit()
 
 
 def run_migrations_offline() -> None:
@@ -77,6 +83,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        ensure_pgvector_extension(connection)
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
