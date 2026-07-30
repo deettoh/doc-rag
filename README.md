@@ -1,8 +1,8 @@
 # DocRAG
 
-**A RAG system for PDF summarization, and study Q&A generation**
+**A RAG system for PDF summarization and study Q&A generation**
 
-DocRAG is a full stack AI application that implements a Retrieval-Augmented Generation (RAG) pipeline for working with PDF documents. It includes document retrieval, vector embeddings, and large language models that perform summarization, question generation, and answer evaluation for study purposes.
+DocRAG is a full-stack AI application that implements a Retrieval-Augmented Generation (RAG) pipeline for working with PDF documents. It includes document retrieval, vector embeddings, and large language models that perform summarization, question generation, and answer evaluation for study purposes.
 
 ---
 
@@ -15,13 +15,21 @@ Uploaded PDF documents go through text extraction, cleanup, chunking, and embedd
 Relevant chunks are retrieved and sent to a language model to generate a concise summary with page citations.
 
 - **Study Question Generation** 
-The system generates study questions from the document and removes similar ones using similarity based deduplication.
+The system generates study questions from the document and removes similar ones using similarity-based deduplication.
 
 - **Answer Evaluation** 
 Users can submit answers to generated questions. A language model evaluates the response and provides a score and feedback.
 
 - **Background Processing with Status Tracking** 
-Long running operations (extraction, chunking, embedding) run asynchronously with persistent status updates (`uploaded` -> `processing` -> `completed` / `failed`).
+Long-running operations (extraction, chunking, embedding) run asynchronously with persistent status updates (`uploaded` -> `processing` -> `completed` / `failed`).
+
+---
+
+## Live Demo
+
+Try the deployed app here: [Live Demo](http://18.143.37.243:8501)
+
+> You can still follow the local setup at [Getting Started](#getting-started) if you want to run the full stack on your machine.
 
 ---
 
@@ -84,7 +92,7 @@ flowchart TB
 | Frontend | Streamlit |
 | Configuration | pydantic-settings |
 | Migrations | Alembic |
-| Deployment | In-progress|
+| Deployment | AWS Lightsail |
 | Tooling | Poetry, Docker, pytest, ruff |
 
 ---
@@ -211,6 +219,7 @@ doc-rag/
 │   └── app.py                     # Streamlit frontend
 ├── tests/                         # Unit, integration, and E2E tests
 ├── docker-compose.yml             # Local development orchestration
+├── docker-compose.prod.yml        # Production overrides
 ├── Dockerfile.backend             # Backend container definition
 └── Dockerfile.frontend            # Frontend container definition
 ```
