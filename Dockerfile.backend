@@ -30,7 +30,8 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock ./
 
 # Install dependencies (no dev dependencies in production)
-RUN poetry install --no-root --only main
+RUN poetry install --no-root --only main \
+    && rm -rf /root/.cache /opt/poetry
 
 # Copy application code and Alembic config
 COPY alembic.ini ./
