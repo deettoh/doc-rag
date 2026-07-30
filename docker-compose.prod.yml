@@ -1,5 +1,5 @@
 # Docker Compose Overrides for DocRAG Production Deployment
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Usage: set COMPOSE_FILE in .env, then docker compose up -d
 
 services:
   db:
